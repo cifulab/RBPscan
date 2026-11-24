@@ -1,0 +1,57 @@
+#! usr/bin/env python3
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Step 1: Load the DNA sequence from a plain text file
+with open('REFERENCE_SEQUENCE.txt', 'r') as file:
+    dna_sequence = file.read().strip()
+
+
+# Confirm the length of the sequence
+dna_length = len(dna_sequence)
+print(f"DNA sequence length: {dna_length} bp")
+
+# Step 2: Load the fragments DataFrame
+fragments_df = pd.read_csv('MERGED_EDITING_FILE.csv')
+print(fragments_df)
+
+# Step 3: Initialize a coverage array
+coverage = np.zeros(dna_length)
+
+# Step 4: Find the start positions by aligning each 30 nt fragment to the DNA sequence
+for index, row in fragments_df.iterrows():
+    fragment_seq = row['Motif']  # The 30 nt sequence
+    abundance_score = row['mean_efficiency']
+    
+    # Find all occurrences of the fragment in the DNA sequence
+    start_positions = [i for i in range(dna_length - 29) if dna_sequence[i:i + 30] == fragment_seq]
+    
+    # Update the coverage array for each found position
+    for start in start_positions:
+        if start >= 0 and start + 30 <= dna_length:  # Ensure the fragment fits within the sequence
+            coverage[start:start + 30] += abundance_score
+
+# Step 5: Save nucleotide positions, sequences, and coverage to CSV
+coverage_df = pd.DataFrame({
+    'Nucleotide Position': np.arange(1, dna_length + 1),
+    'Nucleotide': list(dna_sequence),
+    'Coverage Score': coverage
+})
+
+# Save the DataFrame to a CSV file
+coverage_df.to_csv('COVERAGE_NUCLEOTIDE_SEQUENCE.csv', index=False)
+
+# Step 5: Plot the coverage
+plt.figure(figsize=(4, 2))
+plt.bar(np.arange(dna_length), coverage, color='steelblue', width=5)  # Adjust width for the bar thicknessplt.title('Coverage Plot of DNA Sequence')
+plt.xlabel('Nucleotide Position (1-5000)')
+plt.ylabel('Coverage Score')
+
+# Save the plot as a PDF
+plt.savefig('DENSITY_PLOT.pdf', format='pdf', bbox_inches='tight')
+
+plt.show()
+
